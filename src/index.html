@@ -1,13 +1,399 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
-<head>
-  <meta charset="utf-8">
-  <title>SpreadsheetDemo</title>
-  <base href="/">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <link rel="icon" type="image/x-icon" href="favicon.ico">
-</head>
-<body>
-  <app-root></app-root>
-</body>
+  <head>
+    <meta charset="utf-8" />
+    <title>SpreadsheetDemo</title>
+    <base href="/" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="icon" type="image/x-icon" href="favicon.ico" />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/1.12.1/jquery.min.js"></script>
+    <script src="https://unpkg.com/xlsx-style@0.8.13/dist/xlsx.full.min.js"></script>
+    <!-- 
+    <style media="only screen">
+      html,
+      body {
+        height: 100%;
+        width: 100%;
+        margin: 0;
+        box-sizing: border-box;
+        -webkit-overflow-scrolling: touch;
+      }
+
+      html {
+        position: absolute;
+        top: 0;
+        left: 0;
+        padding: 0;
+        overflow: auto;
+      }
+
+      body {
+        padding: 1rem;
+        overflow: auto;
+      }
+      .example-wrapper {
+        display: flex;
+        flex-direction: column;
+        height: 100%;
+      }
+
+      #myGrid {
+        flex: 1 1 0px;
+        width: 100%;
+      }
+      /* .cell-span {
+        background-color: rgb(185, 180, 180);
+      } */
+      .cell-span {
+        background: rgb(239 239 239);
+        border-left: 1px solid lightgrey !important;
+        border-right: 1px solid lightgrey !important;
+        border-bottom: 1px solid lightgrey !important;
+      }
+    </style> -->
+  </head>
+
+  <body>
+    <!-- <div id="navbar"><span>Red Stapler - SheetJS </span></div>
+    <div id="wrapper">
+      <input type="file" id="input-excel" />
+    </div>
+    <script>
+      $("#input-excel").change(function (e) {
+        var reader = new FileReader();
+        reader.readAsArrayBuffer(e.target.files[0]);
+        reader.onload = function (e) {
+          // var data = new Uint8Array(reader.result);
+          var data = reader.result;
+
+          // New Code
+          var workbook = convertDataToWorkbook(data);
+          populateGrid(workbook);
+
+          // var wb = XLSX.read(data, { type: "array" });
+          // var htmlstr = XLSX.write(wb, {
+          //   sheet: "sheet no1",
+          //   type: "binary",
+          //   bookType: "html",
+          // });
+          // $("#wrapper")[0].innerHTML += htmlstr;
+        };
+      });
+    </script>
+
+    <div class="example-wrapper">
+      <button onclick="importExcel()" style="margin-bottom: 5px">
+        Import Excel
+      </button>
+      <div id="myGrid" class="ag-theme-alpine"></div>
+
+      <div style="margin: 30px">
+        <label>
+          <button onclick="onBtExport()" style="margin: 5px; font-weight: bold">
+            Export to Excel
+          </button>
+        </label>
+      </div>
+    </div> -->
+
+    <app-root></app-root>
+
+    <script type="text/javascript" charset="utf-8">
+      function rowSpan(params) {
+        // if (params.data.show) {
+        //   return 4;
+        // } else {
+        //   return 1;
+        // }
+        var counter = 1;
+        return params.data.Category || params.data["Sub Category"]
+          ? 0
+          : counter++;
+      }
+
+      var gridOptions = {
+        columnDefs: [
+          {
+            field: "Category",
+            cellRenderer: "showCellRenderer",
+            rowSpan: rowSpan,
+            cellClassRules: {
+              "cell-span": "value === undefined",
+            },
+          },
+          {
+            field: "Sub Category",
+            cellRenderer: "showCellRenderer",
+            rowSpan: rowSpan,
+            cellClassRules: {
+              "cell-span": "value === undefined",
+            },
+          },
+          { field: "Indicator #" },
+          { field: "Indicator Name" },
+          { field: "Sub Indicator" },
+          { field: "Rules and Condation" },
+          { field: "Description" },
+          { field: "Unit" },
+          { field: "Frequency" },
+          { field: "Sector (Owner)" },
+          { field: "Year" },
+          { field: "Regin/Speed" },
+          { field: "Decision #" },
+          { field: "January" },
+          { field: "February" },
+          { field: "March" },
+          { field: "Quarter 1" },
+          { field: "April" },
+          { field: "May" },
+          { field: "June" },
+          { field: "Quarter 2" },
+          { field: "Half 1" },
+          { field: "July" },
+          { field: "August" },
+          { field: "September" },
+          { field: "Quarter 3" },
+          { field: "October" },
+          { field: "November" },
+          { field: "December" },
+          { field: "Quarter 4" },
+          { field: "Half 2" },
+          { field: "Notes" },
+        ],
+
+        defaultColDef: {
+          sortable: true,
+          filter: true,
+          resizable: true,
+          minWidth: 200,
+          width: 250,
+        },
+
+        // rowSelection: "multiple",
+
+        components: {
+          showCellRenderer: createShowCellRenderer(),
+        },
+        suppressRowTransform: true,
+
+        rowData: [],
+      };
+
+      function createShowCellRenderer() {
+        function ShowCellRenderer() {}
+        ShowCellRenderer.prototype.init = function (params) {
+          var cellBlank = !params.value;
+          if (cellBlank) {
+            return null;
+          }
+
+          this.ui = document.createElement("div");
+          this.ui.innerHTML =
+            '<div class="show-name">' +
+            params.value +
+            "" +
+            "</div>" +
+            '<div class="show-presenter">' +
+            params.value +
+            "</div>";
+        };
+
+        ShowCellRenderer.prototype.getGui = function () {
+          return this.ui;
+        };
+
+        return ShowCellRenderer;
+      }
+
+      // XMLHttpRequest in promise format
+      function makeRequest(method, url, success, error) {
+        var httpRequest = new XMLHttpRequest();
+        httpRequest.open("GET", url, true);
+        httpRequest.responseType = "arraybuffer";
+
+        httpRequest.open(method, url);
+        httpRequest.onload = function () {
+          success(httpRequest.response);
+        };
+        httpRequest.onerror = function () {
+          error(httpRequest.response);
+        };
+        httpRequest.send();
+      }
+
+      // read the raw data and convert it to a XLSX workbook
+      function convertDataToWorkbook(data) {
+        /* convert data to binary string */
+        var data = new Uint8Array(data);
+        var arr = new Array();
+
+        for (var i = 0; i !== data.length; ++i) {
+          arr[i] = String.fromCharCode(data[i]);
+        }
+
+        var bstr = arr.join("");
+
+        return XLSX.read(bstr, { type: "binary" });
+      }
+
+      // pull out the values we're after, converting it into an array of rowData
+
+      function populateGrid(workbook) {
+        // our data is in the first sheet
+        var firstSheetName = workbook.SheetNames[0];
+        var worksheet = workbook.Sheets[firstSheetName];
+
+        // we expect the following columns to be present
+        var columns = {
+          A: "Category",
+          B: "Sub Category",
+          C: "Indicator #",
+          D: "Indicator Name",
+          E: "Sub Indicator",
+          F: "Rules and Condation",
+          G: "Description",
+          H: "Unit",
+          I: "Frequency",
+          J: "Sector (Owner)",
+          K: "Year",
+          L: "Regin/Speed",
+          M: "Decision #",
+          N: "January",
+          O: "February",
+          P: "March",
+          Q: "Quarter 1",
+          R: "April",
+          S: "May",
+          T: "June",
+          U: "Quarter 2",
+          V: "Half 1",
+          W: "July",
+          X: "August",
+          Y: "September",
+          Z: "Quarter 3",
+          AA: "October",
+          AB: "November",
+          AC: "December",
+          AD: "Quarter 4",
+          AE: "Half 2",
+          AF: "Notes",
+        };
+
+        var rowData = [];
+
+        // start at the 2nd row - the first row are the headers
+        var rowIndex = 2;
+
+        // iterate over the worksheet pulling out the columns we're expecting
+        while (worksheet["A" + rowIndex]) {
+          var row = {};
+          Object.keys(columns).forEach(function (column) {
+            if (worksheet[column + rowIndex])
+              row[columns[column]] = worksheet[column + rowIndex].w;
+          });
+
+          rowData.push(row);
+
+          rowIndex++;
+        }
+
+        var allColumnIds = [];
+        gridOptions.columnApi.getAllColumns().forEach(function (column) {
+          allColumnIds.push(column.colId);
+        });
+
+        gridOptions.columnApi.autoSizeColumns(allColumnIds, false);
+
+        // finally, set the imported rowData into the grid
+        gridOptions.api.setRowData(rowData);
+      }
+
+      function getBooleanValue(cssSelector) {
+        return (
+          (document.querySelector(cssSelector) &&
+            document.querySelector(cssSelector).checked) === true
+        );
+      }
+
+      function getTextValue(cssSelector) {
+        return document.querySelector(cssSelector)?.value;
+      }
+
+      function getNumericValue(cssSelector) {
+        var value = parseFloat(getTextValue(cssSelector));
+        if (isNaN(value)) {
+          var message = "Invalid number entered in " + cssSelector + " field";
+          alert(message);
+          throw new Error(message);
+        }
+        return value;
+      }
+
+      function myColumnWidthCallback(params) {
+        var originalWidth = params.column.getActualWidth();
+        if (params.index < 7) {
+          return originalWidth;
+        }
+        return 30;
+      }
+
+      function onBtExport() {
+        var columnWidth = getBooleanValue("#columnWidth")
+          ? getTextValue("#columnWidthValue")
+          : undefined;
+        var params = {
+          columnWidth:
+            columnWidth === "myColumnWidthCallback"
+              ? myColumnWidthCallback
+              : parseFloat(columnWidth),
+          sheetName:
+            getBooleanValue("#sheetName") && getTextValue("#sheetNameValue"),
+          exportMode: getBooleanValue("#exportModeXml") ? "xml" : undefined,
+          suppressTextAsCDATA: getBooleanValue("#suppressTextAsCDATA"),
+          rowHeight: getBooleanValue("#rowHeight")
+            ? getNumericValue("#rowHeightValue")
+            : undefined,
+          headerRowHeight: getBooleanValue("#headerRowHeight")
+            ? getNumericValue("#headerRowHeightValue")
+            : undefined,
+        };
+
+        gridOptions.api.exportDataAsExcel(params);
+      }
+
+      function importExcel() {
+        makeRequest(
+          "GET",
+          "https://www.ag-grid.com/example-assets/olympic-data.xlsx",
+          // success
+          function (data) {
+            var workbook = convertDataToWorkbook(data);
+
+            populateGrid(workbook);
+          },
+          // error
+          function (error) {
+            throw error;
+          }
+        );
+      }
+
+      // wait for the document to be loaded, otherwise
+      // ag-Grid will not find the div in the document.
+      document.addEventListener("DOMContentLoaded", function () {
+        // lookup the container we want the Grid to use
+        var eGridDiv = document.querySelector("#myGrid");
+
+        // create the grid passing in the div to use together with the columns & data we want to use
+        new agGrid.Grid(eGridDiv, gridOptions);
+      });
+    </script>
+    <script>
+      var __basePath = "./";
+    </script>
+    <script
+      src="https://unpkg.com/@ag-grid-enterprise/all-modules@25.0.0/dist/ag-grid-enterprise.min.js"
+      type="text/javascript"
+    ></script>
+  </body>
 </html>
